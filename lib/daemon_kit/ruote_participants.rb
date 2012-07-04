@@ -96,7 +96,16 @@ module DaemonKit
     private
 
     def run_amqp!
-      AMQP.run do
+      ::AMQP.start :auto_recovery => true do |connection, open_ok|
+        connection.on_recovery do |conn, settings|
+          puts "Connection recovered"
+        end
+
+        connection.on_tcp_connection_loss do |conn, settings|
+          puts "Reconnecting ... please wait"
+          conn.reconnect(false, 20)
+        end
+        
         mq = ::AMQP::Channel.new
         queues = @configuration['amqp']['queues'].to_a | @runtime_queues
 
